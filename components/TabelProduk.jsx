@@ -1,11 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatRupiah } from "@/lib/format";
 import Tombol from "@/components/Tombol";
+import { hapusProduk } from "@/app/admin/actions";
 
 export default function TabelProduk({ daftarProduk = [] }) {
+  const router = useRouter();
   const [produkDetail, setProdukDetail] = useState(null);
+  const [produkHapus, setProdukHapus] = useState(null);
+  const [sedangMenghapus, setSedangMenghapus] = useState(false);
+  const [pesanErrorHapus, setPesanErrorHapus] = useState(null);
+
+  async function handleKonfirmasiHapus() {
+    if (!produkHapus) return;
+    setSedangMenghapus(true);
+    setPesanErrorHapus(null);
+
+    const res = await hapusProduk(produkHapus.id);
+    setSedangMenghapus(false);
+
+    if (res?.error) {
+      setPesanErrorHapus(res.error);
+    } else {
+      setProdukHapus(null);
+      router.refresh();
+    }
+  }
 
   return (
     <>
@@ -52,11 +74,19 @@ export default function TabelProduk({ daftarProduk = [] }) {
                       >
                         Lihat
                       </Tombol>
-                      {/* US-09 dan US-10 (bonus): ubah dan hapus produk */}
+                      {/* US-09: ubah produk */}
                       <Tombol href={`/admin/produk/${produk.id}/ubah`} varian="garis">
                         Ubah
                       </Tombol>
-                      <Tombol type="button" varian="bahaya">
+                      {/* US-10: hapus produk dengan konfirmasi */}
+                      <Tombol
+                        type="button"
+                        varian="bahaya"
+                        onClick={() => {
+                          setProdukHapus(produk);
+                          setPesanErrorHapus(null);
+                        }}
+                      >
                         Hapus
                       </Tombol>
                     </div>
@@ -68,7 +98,7 @@ export default function TabelProduk({ daftarProduk = [] }) {
         </table>
       </div>
 
-      {/* Modal Action to View Detail Produk */}
+      {/* Modal Detail Produk (Action to View) */}
       {produkDetail && (
         <div
           role="dialog"
@@ -120,6 +150,56 @@ export default function TabelProduk({ daftarProduk = [] }) {
               </Tombol>
               <Tombol type="button" varian="garis" onClick={() => setProdukDetail(null)}>
                 Tutup
+              </Tombol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Produk (US-10) */}
+      {produkHapus && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => !sedangMenghapus && setProdukHapus(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-garis bg-latar p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-xl font-extrabold text-bahaya">Konfirmasi Hapus</h2>
+            <p className="mt-2 text-sm text-teks-lembut">
+              Apakah Anda yakin ingin menghapus produk{" "}
+              <span className="font-semibold text-teks">"{produkHapus.nama}"</span>? Tindakan
+              ini akan menghapus produk dari database.
+            </p>
+
+            {pesanErrorHapus && (
+              <div className="mt-4 rounded-lg border border-garis bg-permukaan p-3 text-sm text-bahaya">
+                {pesanErrorHapus}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Tombol
+                type="button"
+                varian="garis"
+                disabled={sedangMenghapus}
+                onClick={() => {
+                  setProdukHapus(null);
+                  setPesanErrorHapus(null);
+                }}
+              >
+                Batal
+              </Tombol>
+              <Tombol
+                type="button"
+                varian="bahaya"
+                disabled={sedangMenghapus}
+                onClick={handleKonfirmasiHapus}
+              >
+                {sedangMenghapus ? "Menghapus..." : "Ya, Hapus"}
               </Tombol>
             </div>
           </div>
